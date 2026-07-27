@@ -1,26 +1,182 @@
 @import "tailwindcss";
 
+/* =============================================================================
+   DESIGN SYSTEM — Gk-king-service
+   Palette : Orange (marque) · Noir (encre) · Blanc
+   ========================================================================== */
+
+@theme {
+  /* Couleurs de marque */
+  --color-brand: #ff6a00;
+  --color-brand-light: #ff8c33;
+  --color-brand-dark: #e85d00;
+  --color-ink: #0a0a0a;
+  --color-ink-soft: #171717;
+
+  /* Polices (variables injectées par next/font dans le layout) */
+  --font-display: var(--font-playfair), Georgia, serif;
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+
+  /* Animations */
+  --animate-marquee: marquee 28s linear infinite;
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* --- Base ------------------------------------------------------------------ */
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #0a0a0a;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Titres display */
+.font-display {
+  font-family: var(--font-display);
+}
+
+/* Sélection */
+::selection {
+  background: var(--color-brand);
+  color: #fff;
+}
+
+/* Barre de défilement fine */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-brand);
+  border-radius: 8px;
+}
+
+/* =============================================================================
+   ANIMATIONS AU DÉFILEMENT (activées par le composant <Reveal/>)
+   ========================================================================== */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(28px);
+  transition:
+    opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+[data-reveal].is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* Variante « zoom » : fondu + léger zoom (idéal pour les photos) */
+[data-reveal="zoom"] {
+  transform: translateY(20px) scale(0.92);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  [data-reveal] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* =============================================================================
+   LIGHTBOX (modal image)
+   ========================================================================== */
+@keyframes modalFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes modalZoom {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-modal-fade {
+  animation: modalFade 0.25s ease-out;
+}
+.animate-modal-zoom {
+  animation: modalZoom 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-modal-fade,
+  .animate-modal-zoom {
+    animation: none;
+  }
+}
+
+/* =============================================================================
+   SLIDESHOW D'EN-TÊTE (crossfade + zoom lent « Ken Burns »)
+   ========================================================================== */
+@keyframes kenburns {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.12);
+  }
+}
+.animate-kenburns {
+  animation: kenburns 12s ease-in-out infinite alternate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-kenburns {
+    animation: none;
+  }
+}
+
+/* Utilitaire : dégradé de texte orange */
+.text-gradient-brand {
+  background: linear-gradient(
+    90deg,
+    var(--color-brand-light),
+    var(--color-brand)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Motif points subtil (fond de sections sombres) */
+.bg-dots {
+  background-image: radial-gradient(
+    rgba(255, 106, 0, 0.18) 1px,
+    transparent 1px
+  );
+  background-size: 22px 22px;
 }
