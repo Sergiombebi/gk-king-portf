@@ -15,7 +15,7 @@ export const site = {
   // ⚠️ REMPLACEZ par vos vraies coordonnées.
   // Format WhatsApp : indicatif pays SANS le "+" ni espaces (Cameroun = 237).
   contact: {
-    whatsapp: "237672028270", // 👈 À REMPLACER par votre numéro WhatsApp
+    whatsapp: "237656092638", // 👈 Numéro WhatsApp (indicatif 237 + 656092638)
     whatsappDisplay: "+237 6 56 09 26 38", // 👈 Affichage lisible
     email: "abbasfifen@gmail.com", // 👈 À REMPLACER par votre e-mail
     phoneDisplay: "+237 6 56 09 26 38",
@@ -31,7 +31,7 @@ export const site = {
   // --- Réseaux sociaux --------------------------------------------------------
   // ⚠️ REMPLACEZ par les liens de vos profils.
   socials: {
-    whatsapp: "https://wa.me/237672028270", // 👈 wa.me/<numéro>
+    whatsapp: "https://wa.me/237656092638", // 👈 wa.me/<numéro>
     facebook: "https://www.facebook.com/share/19UCuohWTV/?mibextid=wwXIfr", // 👈 À REMPLACER
     tiktok: "https://www.tiktok.com/@gklegaza?_r=1&_t=ZS-98MjjzzvTpR", // 👈 À REMPLACER
   },

@@ -7,7 +7,7 @@ import ServiceIcon from "./components/ServiceIcon";
 import { ArrowIcon, MapPinIcon, WhatsAppIcon } from "./components/icons";
 import { Button, Container, Eyebrow, SectionHeading } from "./components/ui";
 import { services } from "@/lib/services";
-import { site, whatsappLink } from "@/lib/site";
+import { whatsappLink } from "@/lib/site";
 
 export default function Home() {
   return (
@@ -30,19 +30,15 @@ export default function Home() {
 function Hero() {
   return (
     <PageHeader
-      images={[
-        "/galerie/hero.jpg",
-        "/galerie/hero-2.jpg",
-        "/galerie/hero-3.jpg",
-      ]}
-      eyebrow={`Photographe professionnel · ${site.location.city}`}
-      title={
-        <>
-          Vos moments,{" "}
-          <span className="text-gradient-brand">sublimés</span> et imprimés.
-        </>
-      }
-      intro="Photographe professionnel à Yaoundé. Photographie, impression numérique et infographie — un seul interlocuteur pour capturer, imprimer et créer tous vos visuels."
+      image="/galerie/hero.jpg"
+      eyebrow="Photographe professionnel · Basé à Yaoundé, disponible partout"
+      // title={
+      //   <>
+      //     Vos moments,{" "}
+      //     <span className="text-gradient-brand">sublimés</span> et imprimés.
+      //   </>
+      // }
+     // intro="Photographe professionnel à Yaoundé. Photographie, impression numérique et infographie — un seul interlocuteur pour capturer, imprimer et créer tous vos visuels."
     >
       <div className="flex flex-wrap gap-3">
         <Button
