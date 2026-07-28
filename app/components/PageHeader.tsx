@@ -4,9 +4,11 @@ import { Container, Eyebrow } from "./ui";
 
 /**
  * En-tête commun à TOUTES les pages (accueil compris) : grand format plein
- * écran, photo de fond bien visible (aucun voile sombre), le texte restant
- * lisible grâce à l'ombre portée. Le fond photo est OPTIONNEL : tant que le
- * fichier n'existe pas, l'en-tête reste sur un beau fond sombre.
+ * écran, photo de fond bien visible. Un dégradé sombre léger part de la gauche
+ * (côté texte) pour garantir la lisibilité quelle que soit la photo — y compris
+ * les fonds clairs ou orangés — tout en laissant la photo apparente à droite.
+ * Le fond photo est OPTIONNEL : tant que le fichier n'existe pas, l'en-tête
+ * reste sur un beau fond sombre.
  */
 export default function PageHeader({
   image,
@@ -23,7 +25,7 @@ export default function PageHeader({
   children?: ReactNode;
 }) {
   return (
-    <section className="relative flex min-h-[92vh] items-center overflow-hidden bg-ink pt-24 text-white">
+    <section className="relative flex min-h-[115vh] items-center overflow-hidden bg-ink pt-24 text-white">
       {/* Fond : photo fixe */}
       <div
         aria-hidden
@@ -34,6 +36,16 @@ export default function PageHeader({
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
         }}
+      />
+
+      {/* Voile dégradé côté texte : lisibilité sur les photos claires */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-transparent"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/60 to-transparent"
       />
 
 

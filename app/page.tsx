@@ -32,12 +32,7 @@ function Hero() {
     <PageHeader
       image="/galerie/hero.jpg"
       eyebrow={site.name}
-      title={
-        <>
-          Photographe{" "}
-          <span className="text-gradient-brand">professionnel</span>
-        </>
-      }
+      title="Photographe professionnel"
       intro="Basé à Yaoundé, disponible partout."
     >
       <div className="flex flex-wrap gap-3">
