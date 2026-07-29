@@ -12,7 +12,7 @@ import { redirect } from "next/navigation";
 import { changePassword, verifyCredentials } from "@/lib/admin-users";
 import { describeBlobError } from "@/lib/blob-errors";
 import { isGalleryFolder } from "@/lib/gallery-config";
-import { deletePhoto } from "@/lib/photos";
+import { deletePhoto, isStorageConfigured } from "@/lib/photos";
 import { createSession, destroySession, requireSession } from "@/lib/session";
 
 export type ActionState = { error?: string; success?: string };
@@ -110,10 +110,10 @@ export async function testStorageAction(): Promise<ActionState> {
     return { error: "Session expirée — reconnectez-vous." };
   }
 
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+  if (!isStorageConfigured()) {
     return {
       error:
-        "BLOB_READ_WRITE_TOKEN est absent : le stockage n'est pas relié à ce déploiement.",
+        "Aucun stockage relié à ce déploiement : ni BLOB_READ_WRITE_TOKEN ni BLOB_STORE_ID n'est présent. Reliez le magasin au projet dans Vercel (Storage → Projets), puis redéployez.",
     };
   }
 
