@@ -10,6 +10,7 @@ import { del, put } from "@vercel/blob";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { changePassword, verifyCredentials } from "@/lib/admin-users";
+import { describeBlobError } from "@/lib/blob-errors";
 import { isGalleryFolder } from "@/lib/gallery-config";
 import { deletePhoto } from "@/lib/photos";
 import { createSession, destroySession, requireSession } from "@/lib/session";
@@ -88,9 +89,8 @@ export async function deletePhotoAction(
     revalidatePath("/admin");
     return { success: "Photo supprimée." };
   } catch (error) {
-    return {
-      error: error instanceof Error ? error.message : "Suppression impossible.",
-    };
+    console.error("Suppression impossible :", error);
+    return { error: describeBlobError(error) };
   }
 }
 
@@ -131,10 +131,8 @@ export async function testStorageAction(): Promise<ActionState> {
         "Stockage opérationnel : écriture et suppression réussies depuis le serveur.",
     };
   } catch (error) {
-    const name = error instanceof Error ? error.name : "Erreur";
-    const message =
-      error instanceof Error ? error.message : "cause inconnue";
-    return { error: `Échec du stockage — ${name} : ${message}` };
+    console.error("Diagnostic du stockage en échec :", error);
+    return { error: describeBlobError(error) };
   }
 }
 

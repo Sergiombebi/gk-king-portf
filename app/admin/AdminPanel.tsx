@@ -4,6 +4,7 @@ import { upload } from "@vercel/blob/client";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
+import { describeBlobError } from "@/lib/blob-errors";
 import type { GALLERY_FOLDERS, GalleryFolderKey } from "@/lib/gallery-config";
 import type { ManagedPhoto } from "@/lib/photos";
 import {
@@ -127,18 +128,6 @@ type Pending = { id: string; file: File; previewUrl: string };
 /** Au-delà, on considère l'envoi perdu plutôt que de laisser tourner. */
 const UPLOAD_TIMEOUT_MS = 90_000;
 
-/** Transforme l'erreur du SDK en message compréhensible. */
-function describeUploadError(error: unknown) {
-  if (!(error instanceof Error)) return "envoi impossible";
-  if (error.name === "TimeoutError" || error.name === "AbortError") {
-    return "délai dépassé — connexion trop lente, ou le stockage a refusé le fichier.";
-  }
-  if (error.message.includes("client token")) {
-    return "le serveur n'a pas délivré d'autorisation d'envoi (session expirée ou stockage non relié).";
-  }
-  return error.message;
-}
-
 function FolderEditor({ data }: { data: FolderData }) {
   const { folder, photos, fallbackCount } = data;
   const router = useRouter();
@@ -234,9 +223,7 @@ function FolderEditor({ data }: { data: FolderData }) {
           },
         );
       } catch (error) {
-        failures.push(
-          `« ${item.file.name} » : ${describeUploadError(error)}`,
-        );
+        failures.push(`« ${item.file.name} » : ${describeBlobError(error)}`);
       }
     }
 
