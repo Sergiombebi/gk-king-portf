@@ -3,7 +3,7 @@
 import { upload } from "@vercel/blob/client";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import type { GALLERY_FOLDERS, GalleryFolderKey } from "@/lib/gallery-config";
 import type { ManagedPhoto } from "@/lib/photos";
 import {
@@ -79,49 +79,113 @@ export default function AdminPanel({
 /*  Contenu d'un onglet                                                        */
 /* -------------------------------------------------------------------------- */
 
+/** Photo choisie mais pas encore envoyée. */
+type Pending = { id: string; file: File; previewUrl: string };
+
 function FolderEditor({ data }: { data: FolderData }) {
   const { folder, photos, fallbackCount } = data;
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState("");
+  const [pending, setPending] = useState<Pending[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
   const [dragging, setDragging] = useState(false);
 
-  async function sendFiles(files: FileList | File[]) {
-    const list = Array.from(files);
-    if (list.length === 0) return;
+  // Libère les aperçus gardés en mémoire quand on quitte l'onglet.
+  const pendingRef = useRef<Pending[]>([]);
+  useEffect(() => {
+    pendingRef.current = pending;
+  }, [pending]);
+  useEffect(
+    () => () => {
+      pendingRef.current.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+    },
+    [],
+  );
 
-    const problems = list
-      .map((file) => validateImage(file))
-      .filter((message): message is string => Boolean(message));
+  /** Ajoute des fichiers à la sélection (sans les envoyer). */
+  function addFiles(files: FileList | File[]) {
+    const chosen = Array.from(files);
+    if (chosen.length === 0) return;
+
+    const problems: string[] = [];
+    const accepted: Pending[] = [];
+
+    for (const file of chosen) {
+      const problem = validateImage(file);
+      if (problem) {
+        problems.push(problem);
+        continue;
+      }
+      accepted.push({
+        id: `${file.name}-${file.lastModified}-${Math.random()}`,
+        file,
+        previewUrl: URL.createObjectURL(file),
+      });
+    }
+
     setErrors(problems);
+    setPending((current) => {
+      // Une seule photo attendue pour l'en-tête : la nouvelle remplace l'ancienne.
+      if (folder.single) {
+        current.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+        return accepted.slice(-1);
+      }
+      return [...current, ...accepted];
+    });
+    if (inputRef.current) inputRef.current.value = "";
+  }
 
-    const valid = list.filter((file) => !validateImage(file));
-    for (const [index, file] of valid.entries()) {
-      setBusy(`Envoi ${index + 1}/${valid.length} — ${file.name}`);
+  function removePending(id: string) {
+    setPending((current) => {
+      const target = current.find((item) => item.id === id);
+      if (target) URL.revokeObjectURL(target.previewUrl);
+      return current.filter((item) => item.id !== id);
+    });
+  }
+
+  function clearPending() {
+    setPending((current) => {
+      current.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+      return [];
+    });
+  }
+
+  /** Envoi effectif, déclenché par le bouton. */
+  async function sendPending() {
+    if (pending.length === 0 || busy) return;
+    const failures: string[] = [];
+
+    for (const [index, item] of pending.entries()) {
+      setBusy(`Envoi ${index + 1}/${pending.length} — ${item.file.name}`);
       try {
-        await upload(buildPhotoPathname(folder.key, file.name, title), file, {
-          access: "public",
-          handleUploadUrl: "/api/admin/upload",
-          contentType: file.type,
-        });
+        await upload(
+          buildPhotoPathname(folder.key, item.file.name, title),
+          item.file,
+          {
+            access: "public",
+            handleUploadUrl: "/api/admin/upload",
+            contentType: item.file.type,
+          },
+        );
       } catch (error) {
-        setErrors((prev) => [
-          ...prev,
-          `« ${file.name} » : ${
+        failures.push(
+          `« ${item.file.name} » : ${
             error instanceof Error ? error.message : "envoi impossible"
           }`,
-        ]);
+        );
       }
     }
 
     setBusy("Actualisation du site…");
     await refreshPhotosAction();
     router.refresh();
-    setBusy(null);
+
+    setErrors(failures);
+    clearPending();
     setTitle("");
-    if (inputRef.current) inputRef.current.value = "";
+    setBusy(null);
   }
 
   return (
@@ -138,7 +202,7 @@ function FolderEditor({ data }: { data: FolderData }) {
         onDrop={(e) => {
           e.preventDefault();
           setDragging(false);
-          void sendFiles(e.dataTransfer.files);
+          addFiles(e.dataTransfer.files);
         }}
         className={`rounded-3xl border-2 border-dashed p-8 text-center transition-colors ${
           dragging ? "border-brand bg-brand/10" : "border-white/15 bg-white/[0.02]"
@@ -169,7 +233,7 @@ function FolderEditor({ data }: { data: FolderData }) {
             accept={ALLOWED_IMAGE_TYPES.join(",")}
             multiple={!folder.single}
             disabled={Boolean(busy)}
-            onChange={(e) => e.target.files && void sendFiles(e.target.files)}
+            onChange={(e) => e.target.files && addFiles(e.target.files)}
             className="block w-full text-sm text-white/60 file:mr-4 file:rounded-full file:border-0 file:bg-brand file:px-5 file:py-2.5 file:text-sm file:font-semibold file:text-white hover:file:bg-brand-dark"
           />
         </div>
@@ -178,6 +242,78 @@ function FolderEditor({ data }: { data: FolderData }) {
           <p className="mt-5 text-sm font-medium text-brand-light">{busy}</p>
         )}
       </div>
+
+      {/* Aperçu avant envoi */}
+      {pending.length > 0 && (
+        <div className="rounded-3xl border border-brand/30 bg-brand/[0.06] p-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h3 className="font-display text-lg font-semibold text-white">
+                {pending.length} photo{pending.length > 1 ? "s" : ""} à envoyer
+              </h3>
+              <p className="mt-1 text-sm text-white/50">
+                Vérifiez l&apos;aperçu, puis validez. Rien n&apos;est publié
+                tant que vous n&apos;avez pas cliqué sur « Envoyer ».
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={clearPending}
+                disabled={Boolean(busy)}
+                className="rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold text-white/70 transition-colors hover:border-white/40 hover:text-white disabled:opacity-50"
+              >
+                Tout annuler
+              </button>
+              <button
+                type="button"
+                onClick={() => void sendPending()}
+                disabled={Boolean(busy)}
+                className="rounded-full bg-brand px-7 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {busy
+                  ? "Envoi en cours…"
+                  : `Envoyer ${pending.length > 1 ? `les ${pending.length} photos` : "la photo"}`}
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {pending.map((item) => (
+              <figure
+                key={item.id}
+                className="group overflow-hidden rounded-2xl border border-white/10 bg-black/30"
+              >
+                <div className="relative aspect-square">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- aperçu local (blob:), non optimisable */}
+                  <img
+                    src={item.previewUrl}
+                    alt={item.file.name}
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removePending(item.id)}
+                    disabled={Boolean(busy)}
+                    aria-label={`Retirer ${item.file.name}`}
+                    className="absolute right-2 top-2 rounded-full bg-black/70 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-600 disabled:opacity-50"
+                  >
+                    Retirer
+                  </button>
+                </div>
+                <figcaption className="px-3 py-2.5">
+                  <span className="block truncate text-xs text-white/70">
+                    {item.file.name}
+                  </span>
+                  <span className="text-[11px] text-white/40">
+                    {(item.file.size / 1024 / 1024).toFixed(1)} Mo
+                  </span>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </div>
+      )}
 
       {errors.length > 0 && (
         <ul className="space-y-2">
