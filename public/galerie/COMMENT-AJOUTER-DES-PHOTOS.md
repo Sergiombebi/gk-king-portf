@@ -1,52 +1,54 @@
 # 📸 Comment intégrer vos photos
 
-Le site est organisé pour que vous n'ayez **qu'à déposer vos images** dans le
-bon dossier, avec le bon nom. Aucune modification de code n'est nécessaire :
-dès qu'un fichier existe, il remplace automatiquement l'emplacement
-« Photo à venir ».
+Il y a désormais **deux façons** d'ajouter des photos au site.
 
-## 🗂️ Structure des dossiers
+## 1. Depuis l'espace administration (recommandé)
+
+Rendez-vous sur `/admin`, connectez-vous, puis glissez-déposez vos photos dans
+la section voulue. Aucun accès au code n'est nécessaire, et le site se met à
+jour tout seul.
+
+👉 Mise en service et fonctionnement détaillé : voir **`ADMIN.md`** à la racine
+du projet.
+
+Sections gérables depuis l'admin :
+
+| Section | Où elle apparaît sur le site |
+|---|---|
+| Photo d'en-tête | Grande photo de fond, en haut de **toutes** les pages |
+| Portfolio (accueil) | Section « Un aperçu de mon univers » |
+| Photographie | Galerie de la page Photographie |
+| Impression numérique | Galerie de la page Impression numérique |
+| Infographie | Galerie de la page Infographie |
+
+## 2. En déposant les fichiers dans ce dossier (méthode d'origine)
+
+Ces images servent de **repli** : elles s'affichent tant qu'aucune photo n'a
+été envoyée depuis l'admin pour la section concernée. Dès qu'une photo est
+ajoutée via l'admin, elles sont remplacées.
 
 ```
 public/galerie/
 ├── hero.jpg                 ← Photo de fond de l'en-tête (COMMUNE à TOUTES les pages)
-├── accueil/                 ← Galerie de la page d'accueil
+├── accueil/                 ← Portfolio de la page d'accueil
 ├── photographie/            ← Galerie « Photographie »
 ├── impression-numerique/    ← Galerie « Impression numérique »
 ├── infographie/             ← Galerie « Infographie »
-├── a-propos/                ← (vide — en-tête commun)
+├── a-propos/                ← Portrait affiché dans la section « À propos »
 └── contact/                 ← (vide — en-tête commun)
 ```
 
-> 🖼️ **Photo d'en-tête** : `public/galerie/hero.jpg` sert de fond à l'en-tête
-> de **toutes** les pages internes (photographie, contact, etc.).
->
-> 🎞️ **Diaporama de l'accueil** : la page d'accueil fait défiler jusqu'à
-> **3 images** avec un fondu enchaîné + zoom lent. Déposez :
->
-> - `public/galerie/hero.jpg` (déjà en place)
-> - `public/galerie/hero-2.jpg` (optionnel)
-> - `public/galerie/hero-3.jpg` (optionnel)
->
-> Le défilement s'active automatiquement dès qu'au moins **2** de ces fichiers
-> existent. Avec une seule image, l'accueil reste fixe (comme les autres pages).
-
 Chaque dossier contient un fichier **`_A-LIRE.md`** qui liste les noms de
-fichiers exacts à utiliser pour ce dossier.
+fichiers exacts à utiliser.
 
 ## ✅ Règles simples
 
-1. **Respectez le nom exact** indiqué dans le `_A-LIRE.md` du dossier
-   (ex : `mariage.jpg`, `hero.jpg`).
-2. **Format `.jpg`** (ou `.webp`), sans accents ni espaces dans le nom.
-3. **En-têtes (`hero.jpg`)** : photo horizontale, large (~1920 px).
-4. **Galeries** : ~1200 px de large suffisent.
+1. **Format `.jpg`, `.png`, `.webp` ou `.avif`**, sans accents ni espaces dans
+   le nom de fichier.
+2. **En-tête** : photo horizontale, large (~1920 px).
+3. **Galeries** : ~1200 px de large suffisent.
+4. **Taille** : 8 Mo maximum par photo lors d'un envoi depuis l'admin.
 
 ## 🖼️ Logo & favicon
 
 - Logo (en-tête, pied de page, onglet du navigateur) : `public/icone.png`
-
-## 🙋 Besoin d'un autre nom ou d'une autre disposition ?
-
-Dites-le moi et j'adapte le code (formats `.png`, ordre des photos, nombre
-d'images par galerie, etc.).

@@ -3,6 +3,7 @@ import { Geist, Playfair_Display } from "next/font/google";
 import { site } from "@/lib/site";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
+import SiteChrome from "./components/SiteChrome";
 import WhatsAppFloat from "./components/WhatsAppFloat";
 import "./globals.css";
 
@@ -57,10 +58,14 @@ export default function RootLayout({
       className={`${geistSans.variable} ${playfair.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col bg-white">
-        <Header />
+        <SiteChrome>
+          <Header />
+        </SiteChrome>
         <main className="flex-1">{children}</main>
-        <Footer />
-        <WhatsAppFloat />
+        <SiteChrome>
+          <Footer />
+          <WhatsAppFloat />
+        </SiteChrome>
       </body>
     </html>
   );

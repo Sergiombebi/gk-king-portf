@@ -1,3 +1,5 @@
+import type { GalleryFolderKey } from "@/lib/gallery-config";
+import { getGallery, getHeroImage } from "@/lib/photos";
 import type { Service } from "@/lib/services";
 import { site, whatsappLink } from "@/lib/site";
 import MasonryGallery from "./MasonryGallery";
@@ -7,12 +9,17 @@ import { CheckIcon, WhatsAppIcon } from "./icons";
 import { Button, Container, Eyebrow, SectionHeading } from "./ui";
 
 /** Gabarit commun aux trois pages de prestation. */
-export default function ServicePage({ service }: { service: Service }) {
+export default async function ServicePage({ service }: { service: Service }) {
+  const [heroImage, gallery] = await Promise.all([
+    getHeroImage(),
+    getGallery(service.slug as GalleryFolderKey),
+  ]);
+
   return (
     <>
       {/* En-tête photo commun */}
       <PageHeader
-        image="/galerie/hero.jpg"
+        image={heroImage}
         eyebrow="Prestation"
         title={service.title}
         intro={service.intro}
@@ -64,7 +71,7 @@ export default function ServicePage({ service }: { service: Service }) {
       </section>
 
       {/* Galerie dédiée (masquée si aucune image n'est prévue) */}
-      {service.gallery.length > 0 && (
+      {gallery.length > 0 && (
         <section className="bg-neutral-50 py-20 md:py-28">
           <Container>
             <div className="mb-12 flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-end">
@@ -79,7 +86,7 @@ export default function ServicePage({ service }: { service: Service }) {
                 seront intégrées prochainement.
               </p>
             </div>
-            <MasonryGallery items={service.gallery} initialCount={4} />
+            <MasonryGallery items={gallery} initialCount={4} />
           </Container>
         </section>
       )}

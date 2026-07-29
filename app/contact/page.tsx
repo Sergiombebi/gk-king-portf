@@ -10,6 +10,7 @@ import {
   WhatsAppIcon,
 } from "@/app/components/icons";
 import { Container } from "@/app/components/ui";
+import { getHeroImage } from "@/lib/photos";
 import { mailLink, site, whatsappLink } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -18,12 +19,14 @@ export const metadata: Metadata = {
     "Contactez Gk-king-service à Yaoundé (Château, Ngoa-Ekellé) par WhatsApp ou e-mail pour un devis gratuit en photographie, impression numérique et infographie.",
 };
 
-export default function Page() {
+export default async function Page() {
+  const heroImage = await getHeroImage();
+
   return (
     <>
       {/* En-tête photo commun */}
       <PageHeader
-        image="/galerie/hero.jpg"
+        image={heroImage}
         eyebrow="Contact"
         title="Parlons de votre projet"
         intro="Une question, une idée, un devis ? Écrivez-moi sur WhatsApp ou par e-mail : je vous réponds rapidement."

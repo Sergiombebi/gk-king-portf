@@ -6,6 +6,7 @@ import Reveal from "./components/Reveal";
 import ServiceIcon from "./components/ServiceIcon";
 import { ArrowIcon, MapPinIcon, WhatsAppIcon } from "./components/icons";
 import { Button, Container, Eyebrow, SectionHeading } from "./components/ui";
+import { getGallery, getHeroImage } from "@/lib/photos";
 import { services } from "@/lib/services";
 import { site, whatsappLink } from "@/lib/site";
 
@@ -27,10 +28,12 @@ export default function Home() {
 /* -------------------------------------------------------------------------- */
 /*  HERO                                                                        */
 /* -------------------------------------------------------------------------- */
-function Hero() {
+async function Hero() {
+  const heroImage = await getHeroImage();
+
   return (
     <PageHeader
-      image="/galerie/hero.jpg"
+      image={heroImage}
       eyebrow={site.name}
       title="Photographe professionnel"
       intro="Basé à Yaoundé, disponible partout."
@@ -192,16 +195,8 @@ function AboutTeaser() {
 /* -------------------------------------------------------------------------- */
 /*  APERÇU GALERIE                                                              */
 /* -------------------------------------------------------------------------- */
-function GalleryTeaser() {
-  const items = [
-    { src: "/galerie/accueil/mariage.jpg", alt: "Mariage" },
-    { src: "/galerie/accueil/portrait.jpg", alt: "Portrait" },
-    { src: "/galerie/accueil/evenement.jpg", alt: "Événement" },
-    { src: "/galerie/accueil/textile.jpg", alt: "Personnalisation textile" },
-    { src: "/galerie/accueil/design.jpg", alt: "Design & infographie" },
-    { src: "/galerie/accueil/spot-publicitaire.jpg", alt: "Spot publicitaire" },
-    { src: "/galerie/accueil/agrandissement.jpg", alt: "Agrandissement" },
-  ];
+async function GalleryTeaser() {
+  const items = await getGallery("accueil");
   return (
     <section className="py-20 md:py-28">
       <Container>
