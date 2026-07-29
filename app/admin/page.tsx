@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { GALLERY_FOLDERS, fallbackGallery } from "@/lib/gallery-config";
-import { isStorageConfigured, listManagedPhotos } from "@/lib/photos";
+import {
+  canUploadFromBrowser,
+  isStorageConfigured,
+  listManagedPhotos,
+} from "@/lib/photos";
 import { getSession } from "@/lib/session";
 import AdminPanel, { type FolderData } from "./AdminPanel";
 import PasswordForm from "./PasswordForm";
@@ -63,7 +67,11 @@ export default async function AdminPage() {
           </div>
         </header>
 
-        <AdminPanel data={data} storageReady={isStorageConfigured()} />
+        <AdminPanel
+          data={data}
+          storageReady={isStorageConfigured()}
+          browserUpload={canUploadFromBrowser()}
+        />
 
         <section className="border-t border-white/10 pt-10">
           <h2 className="font-display text-xl font-semibold">

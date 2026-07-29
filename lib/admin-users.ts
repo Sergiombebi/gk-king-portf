@@ -13,6 +13,7 @@
 import { get, put } from "@vercel/blob";
 import { randomBytes, scrypt, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
+import { isStorageConfigured } from "./photos";
 
 const scryptAsync = promisify(scrypt) as (
   password: string,
@@ -49,7 +50,7 @@ async function matchesPassword(password: string, stored: string) {
 /* -------------------------------------------------------------------------- */
 
 async function readStoredUsers(): Promise<AdminUser[] | null> {
-  if (!process.env.BLOB_READ_WRITE_TOKEN) return null;
+  if (!isStorageConfigured()) return null;
   try {
     const result = await get(CREDENTIALS_PATH, {
       access: "private",
@@ -120,7 +121,7 @@ export async function changePassword(
   if (!(await verifyCredentials(username, currentPassword))) {
     throw new Error("Mot de passe actuel incorrect.");
   }
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+  if (!isStorageConfigured()) {
     throw new Error(
       "Le stockage n'est pas configuré : impossible d'enregistrer le nouveau mot de passe.",
     );

@@ -5,7 +5,7 @@
 //  (voir app/api/admin/upload/route.ts).
 // =============================================================================
 
-import { del, list } from "@vercel/blob";
+import { del, list, put } from "@vercel/blob";
 import type { GalleryItem } from "@/app/components/Gallery";
 import {
   FALLBACK_HERO,
@@ -26,8 +26,20 @@ export type ManagedPhoto = {
   uploadedAt: string;
 };
 
-/** Le stockage n'est actif qu'une fois la variable d'environnement fournie. */
+/**
+ * Le stockage est utilisable de deux façons :
+ *  • `BLOB_READ_WRITE_TOKEN` — l'ancienne clé, qui autorise tout ;
+ *  • `BLOB_STORE_ID` + jeton OIDC fourni par Vercel — le nouveau mode, qui
+ *    couvre la lecture, l'écriture et la suppression DEPUIS LE SERVEUR.
+ */
 export const isStorageConfigured = () =>
+  Boolean(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID);
+
+/**
+ * L'envoi direct navigateur → stockage exige de signer un jeton temporaire,
+ * ce que seule l'ancienne clé permet. Sans elle, on passe par le serveur.
+ */
+export const canUploadFromBrowser = () =>
   Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 
 /**
@@ -75,6 +87,27 @@ export async function getGallery(
 export async function getHeroImage(): Promise<string> {
   const managed = await listManagedPhotos("hero");
   return managed.at(-1)?.url ?? FALLBACK_HERO;
+}
+
+/**
+ * Envoi effectué PAR LE SERVEUR (voie de secours quand le navigateur ne peut
+ * pas écrire directement dans le stockage). La photo transite alors par le
+ * site, d'où une limite de taille plus basse.
+ */
+export async function uploadPhotoFromServer(
+  pathname: string,
+  file: File,
+  contentType: string,
+) {
+  if (!pathname.startsWith(`${ROOT}/`)) {
+    throw new Error("Destination invalide.");
+  }
+  return put(pathname, file, {
+    access: "public",
+    contentType,
+    addRandomSuffix: false,
+    allowOverwrite: true,
+  });
 }
 
 /** Supprime une photo à partir de son chemin interne. */

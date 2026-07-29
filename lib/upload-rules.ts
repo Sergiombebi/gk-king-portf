@@ -7,6 +7,12 @@ import type { GalleryFolderKey } from "./gallery-config";
 
 export const MAX_UPLOAD_BYTES = 8 * 1024 * 1024; // 8 Mo par photo
 
+/**
+ * Quand la photo transite par le serveur (voie de secours), la plateforme
+ * limite la taille des requêtes : on reste sous cette barre.
+ */
+export const MAX_SERVER_UPLOAD_BYTES = 4 * 1024 * 1024; // 4 Mo
+
 export const ALLOWED_IMAGE_TYPES = [
   "image/jpeg",
   "image/png",
@@ -52,12 +58,17 @@ export function buildPhotoPathname(
 }
 
 /** Message d'erreur si le fichier ne respecte pas les règles, sinon `null`. */
-export function validateImage(file: { name: string; type: string; size: number }) {
+export function validateImage(
+  file: { name: string; type: string; size: number },
+  maxBytes: number = MAX_UPLOAD_BYTES,
+) {
   if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
     return `« ${file.name} » : format non accepté (JPG, PNG, WEBP ou AVIF).`;
   }
-  if (file.size > MAX_UPLOAD_BYTES) {
-    return `« ${file.name} » dépasse ${MAX_UPLOAD_BYTES / 1024 / 1024} Mo.`;
+  if (file.size > maxBytes) {
+    return `« ${file.name} » pèse ${(file.size / 1024 / 1024).toFixed(
+      1,
+    )} Mo, au-delà de la limite de ${maxBytes / 1024 / 1024} Mo. Réduisez la photo avant de l'envoyer.`;
   }
   return null;
 }
