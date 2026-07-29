@@ -17,8 +17,21 @@ Dans le tableau de bord Vercel :
 2. **Create Database** → choisissez **Blob** → validez
 3. **Connect Project** → sélectionnez ce projet
 
-Vercel ajoute alors tout seul la variable `BLOB_READ_WRITE_TOKEN`. Rien à
-copier à la main.
+Vercel ajoute alors tout seul les variables nécessaires. Deux cas possibles
+selon l'âge de votre compte, et le site s'adapte automatiquement aux deux :
+
+| Variable ajoutée | Mode d'envoi des photos | Taille max |
+|---|---|---|
+| `BLOB_READ_WRITE_TOKEN` | Le navigateur écrit directement dans le stockage | 8 Mo |
+| `BLOB_STORE_ID` (mode OIDC) | La photo passe par le site | 4 Mo |
+
+Le second mode est celui des connexions récentes. Il fonctionne parfaitement,
+mais la plateforme limite la taille des requêtes reçues par le site, d'où le
+plafond plus bas. Pour repasser en envoi direct, ajoutez manuellement un
+`BLOB_READ_WRITE_TOKEN` (onglet **Paramètres** du magasin, section des jetons)
+puis redéployez.
+
+Le tableau de bord indique toujours quel mode est actif.
 
 ## 2. Définir les identifiants (une seule fois)
 

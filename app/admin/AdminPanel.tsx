@@ -447,10 +447,20 @@ function FolderEditor({
           )}
         </p>
       ) : (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {photos.map((photo) => (
-            <PhotoCard key={photo.pathname} photo={photo} />
-          ))}
+        <div>
+          <h3 className="font-display text-lg font-semibold text-white">
+            {photos.length} photo{photos.length > 1 ? "s" : ""} en ligne
+          </h3>
+          <p className="mt-1 text-sm text-white/50">
+            Ces photos sont visibles par les visiteurs. Vous pouvez en
+            supprimer une à tout moment : elle disparaît du site
+            immédiatement.
+          </p>
+          <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {photos.map((photo) => (
+              <PhotoCard key={photo.pathname} photo={photo} />
+            ))}
+          </div>
         </div>
       )}
     </section>
@@ -478,28 +488,61 @@ function PhotoCard({ photo }: { photo: ManagedPhoto }) {
   }
 
   return (
-    <figure className="group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
+    <figure className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
       <div className="relative aspect-square">
         <Image
           src={photo.url}
           alt={photo.alt}
           fill
           sizes="(max-width: 640px) 50vw, 25vw"
-          className="object-cover"
+          className={`object-cover transition-opacity ${
+            pending ? "opacity-40" : ""
+          }`}
         />
+      </div>
+      <figcaption className="space-y-2 px-3 py-3">
+        <span className="block truncate text-sm text-white/80">{photo.alt}</span>
+        <span className="block text-[11px] text-white/40">
+          Ajoutée le{" "}
+          {new Date(photo.uploadedAt).toLocaleDateString("fr-FR", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          })}
+        </span>
+        {/* Bouton toujours visible : sur téléphone, le survol n'existe pas. */}
         <button
           type="button"
           onClick={remove}
           disabled={pending}
-          className="absolute right-2 top-2 rounded-full bg-black/70 px-3 py-1.5 text-xs font-semibold text-white opacity-0 transition-opacity hover:bg-red-600 focus:opacity-100 group-hover:opacity-100 disabled:opacity-60"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-red-500/40 px-4 py-2 text-xs font-semibold text-red-300 transition-colors hover:border-red-500 hover:bg-red-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {pending ? "…" : "Supprimer"}
+          <TrashIcon className="h-3.5 w-3.5" />
+          {pending ? "Suppression…" : "Supprimer"}
         </button>
-      </div>
-      <figcaption className="px-3 py-2.5">
-        <span className="block truncate text-sm text-white/80">{photo.alt}</span>
-        {error && <span className="text-xs text-red-300">{error}</span>}
+        {error && (
+          <span className="block text-xs leading-relaxed text-red-300">
+            {error}
+          </span>
+        )}
       </figcaption>
     </figure>
+  );
+}
+
+function TrashIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6" />
+    </svg>
   );
 }
