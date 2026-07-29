@@ -4,7 +4,7 @@ import { upload } from "@vercel/blob/client";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { SpinnerIcon } from "@/app/components/icons";
+import { CloseIcon, SpinnerIcon } from "@/app/components/icons";
 import { describeBlobError } from "@/lib/blob-errors";
 import type { GALLERY_FOLDERS, GalleryFolderKey } from "@/lib/gallery-config";
 import type { ManagedPhoto } from "@/lib/photos";
@@ -530,9 +530,9 @@ function PhotoCard({ photo }: { photo: ManagedPhoto }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   function remove() {
-    if (!confirm(`Supprimer définitivement « ${photo.alt} » ?`)) return;
     startTransition(async () => {
       const formData = new FormData();
       formData.set("pathname", photo.pathname);
@@ -540,52 +540,157 @@ function PhotoCard({ photo }: { photo: ManagedPhoto }) {
       if (result.error) setError(result.error);
       else router.refresh();
     });
+    setShowConfirm(false);
   }
 
   return (
-    <figure className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
-      <div className="relative aspect-square">
-        <Image
-          src={photo.url}
-          alt={photo.alt}
-          fill
-          sizes="(max-width: 640px) 50vw, 25vw"
-          className={`object-cover transition-opacity ${
-            pending ? "opacity-40" : ""
-          }`}
+    <>
+      <figure className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
+        <div className="relative aspect-square">
+          <Image
+            src={photo.url}
+            alt={photo.alt}
+            fill
+            sizes="(max-width: 640px) 50vw, 25vw"
+            className={`object-cover transition-opacity ${
+              pending ? "opacity-40" : ""
+            }`}
+          />
+        </div>
+        <figcaption className="space-y-2 px-3 py-3">
+          <span className="block truncate text-sm text-white/80">{photo.alt}</span>
+          <span className="block text-[11px] text-white/40">
+            Ajoutée le{" "}
+            {new Date(photo.uploadedAt).toLocaleDateString("fr-FR", {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            })}
+          </span>
+          {/* Bouton toujours visible : sur téléphone, le survol n'existe pas. */}
+          <button
+            type="button"
+            onClick={() => setShowConfirm(true)}
+            disabled={pending}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-red-500/40 px-4 py-2 text-xs font-semibold text-red-300 transition-colors hover:border-red-500 hover:bg-red-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {pending ? (
+              <SpinnerIcon className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <TrashIcon className="h-3.5 w-3.5" />
+            )}
+            {pending ? "Suppression…" : "Supprimer"}
+          </button>
+          {error && (
+            <span className="block text-xs leading-relaxed text-red-300">
+              {error}
+            </span>
+          )}
+        </figcaption>
+      </figure>
+
+      {showConfirm && (
+        <ConfirmDialog
+          title="Supprimer la photo"
+          message={`Supprimer définitivement « ${photo.alt} » ?`}
+          confirmLabel="Supprimer"
+          onConfirm={remove}
+          onCancel={() => setShowConfirm(false)}
         />
-      </div>
-      <figcaption className="space-y-2 px-3 py-3">
-        <span className="block truncate text-sm text-white/80">{photo.alt}</span>
-        <span className="block text-[11px] text-white/40">
-          Ajoutée le{" "}
-          {new Date(photo.uploadedAt).toLocaleDateString("fr-FR", {
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-          })}
-        </span>
-        {/* Bouton toujours visible : sur téléphone, le survol n'existe pas. */}
+      )}
+    </>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Boîte de confirmation personnalisée                                        */
+/* -------------------------------------------------------------------------- */
+
+function ConfirmDialog({
+  title,
+  message,
+  confirmLabel,
+  onConfirm,
+  onCancel,
+}: {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onCancel();
+    };
+    document.addEventListener("keydown", onKeyDown);
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [onCancel]);
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="confirm-title"
+      className="animate-fade-in fixed inset-0 z-[110] flex items-center justify-center bg-black/80 px-5 backdrop-blur-sm"
+      onMouseDown={(event) => {
+        if (!panelRef.current?.contains(event.target as Node)) onCancel();
+      }}
+    >
+      <div
+        ref={panelRef}
+        className="relative animate-pop-in w-full max-w-sm rounded-3xl border border-white/10 bg-ink p-7 text-white shadow-2xl shadow-black/50"
+      >
         <button
           type="button"
-          onClick={remove}
-          disabled={pending}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-red-500/40 px-4 py-2 text-xs font-semibold text-red-300 transition-colors hover:border-red-500 hover:bg-red-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+          onClick={onCancel}
+          aria-label="Fermer"
+          className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full text-white/50 transition-colors hover:bg-white/10 hover:text-white"
         >
-          {pending ? (
-            <SpinnerIcon className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <TrashIcon className="h-3.5 w-3.5" />
-          )}
-          {pending ? "Suppression…" : "Supprimer"}
+          <CloseIcon className="h-5 w-5" />
         </button>
-        {error && (
-          <span className="block text-xs leading-relaxed text-red-300">
-            {error}
-          </span>
-        )}
-      </figcaption>
-    </figure>
+
+        <h3
+          id="confirm-title"
+          className="font-display text-lg font-semibold"
+        >
+          {title}
+        </h3>
+        <p className="mt-3 text-sm leading-relaxed text-white/60">
+          {message}
+        </p>
+
+        <p className="mt-4 text-xs text-white/30">
+          Cette action est irréversible.
+        </p>
+
+        <div className="mt-6 flex items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold text-white/70 transition-colors hover:border-white/40 hover:text-white"
+          >
+            Annuler
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="rounded-full bg-red-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-500"
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
