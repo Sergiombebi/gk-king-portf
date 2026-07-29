@@ -9,6 +9,7 @@ import type { GALLERY_FOLDERS, GalleryFolderKey } from "@/lib/gallery-config";
 import type { ManagedPhoto } from "@/lib/photos";
 import {
   ALLOWED_IMAGE_TYPES,
+  MAX_SERVER_UPLOAD_BYTES,
   MAX_UPLOAD_BYTES,
   buildPhotoPathname,
   validateImage,
@@ -31,9 +32,12 @@ export type FolderData = {
 export default function AdminPanel({
   data,
   storageReady,
+  browserUpload,
 }: {
   data: FolderData[];
   storageReady: boolean;
+  /** true : envoi direct navigateur → stockage. false : passage par le serveur. */
+  browserUpload: boolean;
 }) {
   const [active, setActive] = useState<GalleryFolderKey>(data[0].folder.key);
   const current = data.find((d) => d.folder.key === active)!;
@@ -42,13 +46,25 @@ export default function AdminPanel({
     <div className="space-y-8">
       {!storageReady && (
         <p className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-5 py-4 text-sm text-amber-200">
-          Le stockage des photos n&apos;est pas encore configuré (variable{" "}
-          <code>BLOB_READ_WRITE_TOKEN</code>). Vous pouvez parcourir
-          l&apos;interface, mais les envois et suppressions échoueront.
+          Aucun stockage n&apos;est relié à ce déploiement : ni{" "}
+          <code>BLOB_READ_WRITE_TOKEN</code> ni <code>BLOB_STORE_ID</code>{" "}
+          n&apos;est présent. Reliez le magasin au projet dans Vercel (Storage →
+          Projets) puis redéployez. Vous pouvez parcourir l&apos;interface, mais
+          les envois et suppressions échoueront.
         </p>
       )}
 
       <StorageTest />
+
+      {storageReady && !browserUpload && (
+        <p className="rounded-2xl border border-white/10 bg-white/[0.02] px-5 py-4 text-sm text-white/50">
+          Mode d&apos;envoi : les photos passent par le site (limite{" "}
+          {MAX_SERVER_UPLOAD_BYTES / 1024 / 1024} Mo par photo). Pour envoyer
+          des fichiers plus lourds et plus vite, ajoutez la variable{" "}
+          <code className="text-brand-light">BLOB_READ_WRITE_TOKEN</code> dans
+          Vercel.
+        </p>
+      )}
 
       {/* Onglets */}
       <div className="flex flex-wrap gap-2">
@@ -78,7 +94,11 @@ export default function AdminPanel({
         })}
       </div>
 
-      <FolderEditor key={current.folder.key} data={current} />
+      <FolderEditor
+        key={current.folder.key}
+        data={current}
+        browserUpload={browserUpload}
+      />
     </div>
   );
 }
@@ -128,8 +148,40 @@ type Pending = { id: string; file: File; previewUrl: string };
 /** Au-delà, on considère l'envoi perdu plutôt que de laisser tourner. */
 const UPLOAD_TIMEOUT_MS = 90_000;
 
-function FolderEditor({ data }: { data: FolderData }) {
+/** Voie de secours : la photo passe par le site, qui l'écrit dans le stockage. */
+async function uploadThroughServer(
+  folder: GalleryFolderKey,
+  file: File,
+  title: string,
+) {
+  const formData = new FormData();
+  formData.set("file", file);
+  formData.set("folder", folder);
+  formData.set("title", title);
+
+  const response = await fetch("/api/admin/upload-serveur", {
+    method: "POST",
+    body: formData,
+    signal: AbortSignal.timeout(UPLOAD_TIMEOUT_MS),
+  });
+
+  if (!response.ok) {
+    const details = await response
+      .json()
+      .catch(() => ({ error: `Le serveur a répondu ${response.status}.` }));
+    throw new Error(details.error ?? "Envoi impossible.");
+  }
+}
+
+function FolderEditor({
+  data,
+  browserUpload,
+}: {
+  data: FolderData;
+  browserUpload: boolean;
+}) {
   const { folder, photos, fallbackCount } = data;
+  const maxBytes = browserUpload ? MAX_UPLOAD_BYTES : MAX_SERVER_UPLOAD_BYTES;
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState("");
@@ -159,7 +211,7 @@ function FolderEditor({ data }: { data: FolderData }) {
     const accepted: Pending[] = [];
 
     for (const file of chosen) {
-      const problem = validateImage(file);
+      const problem = validateImage(file, maxBytes);
       if (problem) {
         problems.push(problem);
         continue;
@@ -207,21 +259,25 @@ function FolderEditor({ data }: { data: FolderData }) {
       const position = `Envoi ${index + 1}/${pending.length} — ${item.file.name}`;
       setBusy(position);
       try {
-        await upload(
-          buildPhotoPathname(folder.key, item.file.name, title),
-          item.file,
-          {
-            access: "public",
-            handleUploadUrl: "/api/admin/upload",
-            contentType: item.file.type,
-            // Sans limite de temps, le SDK réessaie une dizaine de fois avec
-            // des délais croissants : l'interface semble figée alors que
-            // l'envoi échoue en silence.
-            abortSignal: AbortSignal.timeout(UPLOAD_TIMEOUT_MS),
-            onUploadProgress: ({ percentage }) =>
-              setBusy(`${position} — ${Math.round(percentage)} %`),
-          },
-        );
+        if (browserUpload) {
+          await upload(
+            buildPhotoPathname(folder.key, item.file.name, title),
+            item.file,
+            {
+              access: "public",
+              handleUploadUrl: "/api/admin/upload",
+              contentType: item.file.type,
+              // Sans limite de temps, le SDK réessaie une dizaine de fois avec
+              // des délais croissants : l'interface semble figée alors que
+              // l'envoi échoue en silence.
+              abortSignal: AbortSignal.timeout(UPLOAD_TIMEOUT_MS),
+              onUploadProgress: ({ percentage }) =>
+                setBusy(`${position} — ${Math.round(percentage)} %`),
+            },
+          );
+        } else {
+          await uploadThroughServer(folder.key, item.file, title);
+        }
       } catch (error) {
         failures.push(`« ${item.file.name} » : ${describeBlobError(error)}`);
       }
@@ -261,7 +317,7 @@ function FolderEditor({ data }: { data: FolderData }) {
           Glissez vos photos ici
         </p>
         <p className="mt-1 text-sm text-white/50">
-          ou choisissez-les depuis votre appareil — {ALLOWED_IMAGE_TYPES.map((t) => t.replace("image/", "").toUpperCase()).join(", ")}, {MAX_UPLOAD_BYTES / 1024 / 1024} Mo max par photo
+          ou choisissez-les depuis votre appareil — {ALLOWED_IMAGE_TYPES.map((t) => t.replace("image/", "").toUpperCase()).join(", ")}, {maxBytes / 1024 / 1024} Mo max par photo
         </p>
 
         <div className="mx-auto mt-6 max-w-sm space-y-3 text-left">
