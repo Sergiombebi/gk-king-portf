@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { navLinks, site, whatsappLink } from "@/lib/site";
+import AdminLink from "./AdminLink";
 import { CloseIcon, MenuIcon, WhatsAppIcon } from "./icons";
 
 export default function Header() {
@@ -83,6 +84,15 @@ export default function Header() {
 
         {/* CTA + burger */}
         <div className="flex items-center gap-2">
+          {/* Bureau : bouton complet */}
+          <AdminLink className="hidden items-center gap-2 rounded-full border border-brand/40 px-4 py-2 text-sm font-semibold text-brand-light transition-colors hover:border-brand hover:bg-brand hover:text-white lg:inline-flex" />
+
+          {/* Mobile : icône seule, toujours accessible sans ouvrir le menu */}
+          <AdminLink
+            showLabel={false}
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-brand/40 text-brand-light transition-colors hover:bg-brand hover:text-white lg:hidden"
+          />
+
           <a
             href={whatsappLink(
               "Bonjour Gk-king-service, je vous contacte depuis votre site.",
@@ -114,7 +124,7 @@ export default function Header() {
       {/* Menu mobile */}
       <div
         className={`overflow-hidden bg-ink transition-[max-height] duration-500 ease-out lg:hidden ${
-          open ? "max-h-[26rem] border-t border-white/10" : "max-h-0"
+          open ? "max-h-[34rem] border-t border-white/10" : "max-h-0"
         }`}
       >
         <nav className="flex flex-col gap-1 px-5 py-4">
@@ -142,6 +152,7 @@ export default function Header() {
             <WhatsAppIcon className="h-4 w-4" />
             Écrire sur WhatsApp
           </a>
+          <AdminLink className="mt-1 inline-flex items-center justify-center gap-2 rounded-full border border-brand/40 px-5 py-3 text-sm font-semibold text-brand-light" />
         </nav>
       </div>
     </header>
