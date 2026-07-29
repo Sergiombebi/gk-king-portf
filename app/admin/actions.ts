@@ -6,13 +6,12 @@
 //  directe, pas seulement depuis l'interface.
 // =============================================================================
 
-import { del, put } from "@vercel/blob";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { changePassword, verifyCredentials } from "@/lib/admin-users";
 import { describeBlobError } from "@/lib/blob-errors";
 import { isGalleryFolder } from "@/lib/gallery-config";
-import { deletePhoto, isStorageConfigured } from "@/lib/photos";
+import { deletePhoto } from "@/lib/photos";
 import { createSession, destroySession, requireSession } from "@/lib/session";
 
 export type ActionState = { error?: string; success?: string };
@@ -90,48 +89,6 @@ export async function deletePhotoAction(
     return { success: "Photo supprimée." };
   } catch (error) {
     console.error("Suppression impossible :", error);
-    return { error: describeBlobError(error) };
-  }
-}
-
-/* -------------------------------------------------------------------------- */
-/*  Diagnostic du stockage                                                     */
-/* -------------------------------------------------------------------------- */
-
-/**
- * Dépose puis supprime un fichier témoin depuis le SERVEUR, et renvoie
- * l'erreur brute en cas d'échec. Permet de savoir si le problème vient du
- * stockage lui-même ou du trajet navigateur → stockage.
- */
-export async function testStorageAction(): Promise<ActionState> {
-  try {
-    await requireSession();
-  } catch {
-    return { error: "Session expirée — reconnectez-vous." };
-  }
-
-  if (!isStorageConfigured()) {
-    return {
-      error:
-        "Aucun stockage relié à ce déploiement : ni BLOB_READ_WRITE_TOKEN ni BLOB_STORE_ID n'est présent. Reliez le magasin au projet dans Vercel (Storage → Projets), puis redéployez.",
-    };
-  }
-
-  const pathname = `galerie/_diagnostic-${Date.now()}.txt`;
-  try {
-    const blob = await put(pathname, "test", {
-      access: "public",
-      contentType: "text/plain",
-      addRandomSuffix: false,
-      allowOverwrite: true,
-    });
-    await del(blob.url);
-    return {
-      success:
-        "Stockage opérationnel : écriture et suppression réussies depuis le serveur.",
-    };
-  } catch (error) {
-    console.error("Diagnostic du stockage en échec :", error);
     return { error: describeBlobError(error) };
   }
 }

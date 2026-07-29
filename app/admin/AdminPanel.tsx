@@ -14,12 +14,7 @@ import {
   buildPhotoPathname,
   validateImage,
 } from "@/lib/upload-rules";
-import {
-  deletePhotoAction,
-  refreshPhotosAction,
-  testStorageAction,
-  type ActionState,
-} from "./actions";
+import { deletePhotoAction, refreshPhotosAction } from "./actions";
 
 type Folder = (typeof GALLERY_FOLDERS)[number];
 
@@ -51,18 +46,6 @@ export default function AdminPanel({
           n&apos;est présent. Reliez le magasin au projet dans Vercel (Storage →
           Projets) puis redéployez. Vous pouvez parcourir l&apos;interface, mais
           les envois et suppressions échoueront.
-        </p>
-      )}
-
-      <StorageTest />
-
-      {storageReady && !browserUpload && (
-        <p className="rounded-2xl border border-white/10 bg-white/[0.02] px-5 py-4 text-sm text-white/50">
-          Mode d&apos;envoi : les photos passent par le site (limite{" "}
-          {MAX_SERVER_UPLOAD_BYTES / 1024 / 1024} Mo par photo). Pour envoyer
-          des fichiers plus lourds et plus vite, ajoutez la variable{" "}
-          <code className="text-brand-light">BLOB_READ_WRITE_TOKEN</code> dans
-          Vercel.
         </p>
       )}
 
@@ -99,41 +82,6 @@ export default function AdminPanel({
         data={current}
         browserUpload={browserUpload}
       />
-    </div>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/*  Diagnostic du stockage                                                     */
-/* -------------------------------------------------------------------------- */
-
-function StorageTest() {
-  const [state, setState] = useState<ActionState | null>(null);
-  const [running, startTest] = useTransition();
-
-  return (
-    <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.02] px-5 py-4">
-      <button
-        type="button"
-        disabled={running}
-        onClick={() =>
-          startTest(async () => setState(await testStorageAction()))
-        }
-        className="rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold text-white/80 transition-colors hover:border-brand/50 hover:text-white disabled:opacity-60"
-      >
-        {running ? "Test en cours…" : "Tester le stockage"}
-      </button>
-      {state?.success && (
-        <span className="text-sm text-emerald-300">{state.success}</span>
-      )}
-      {state?.error && (
-        <span className="text-sm text-red-300">{state.error}</span>
-      )}
-      {!state && (
-        <span className="text-sm text-white/40">
-          Vérifie que le serveur sait écrire dans le stockage.
-        </span>
-      )}
     </div>
   );
 }
