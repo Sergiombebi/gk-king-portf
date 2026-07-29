@@ -6,6 +6,7 @@
 //  directe, pas seulement depuis l'interface.
 // =============================================================================
 
+import { del, put } from "@vercel/blob";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { changePassword, verifyCredentials } from "@/lib/admin-users";
@@ -90,6 +91,50 @@ export async function deletePhotoAction(
     return {
       error: error instanceof Error ? error.message : "Suppression impossible.",
     };
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Diagnostic du stockage                                                     */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Dépose puis supprime un fichier témoin depuis le SERVEUR, et renvoie
+ * l'erreur brute en cas d'échec. Permet de savoir si le problème vient du
+ * stockage lui-même ou du trajet navigateur → stockage.
+ */
+export async function testStorageAction(): Promise<ActionState> {
+  try {
+    await requireSession();
+  } catch {
+    return { error: "Session expirée — reconnectez-vous." };
+  }
+
+  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    return {
+      error:
+        "BLOB_READ_WRITE_TOKEN est absent : le stockage n'est pas relié à ce déploiement.",
+    };
+  }
+
+  const pathname = `galerie/_diagnostic-${Date.now()}.txt`;
+  try {
+    const blob = await put(pathname, "test", {
+      access: "public",
+      contentType: "text/plain",
+      addRandomSuffix: false,
+      allowOverwrite: true,
+    });
+    await del(blob.url);
+    return {
+      success:
+        "Stockage opérationnel : écriture et suppression réussies depuis le serveur.",
+    };
+  } catch (error) {
+    const name = error instanceof Error ? error.name : "Erreur";
+    const message =
+      error instanceof Error ? error.message : "cause inconnue";
+    return { error: `Échec du stockage — ${name} : ${message}` };
   }
 }
 

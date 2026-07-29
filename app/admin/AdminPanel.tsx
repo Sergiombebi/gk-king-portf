@@ -12,7 +12,12 @@ import {
   buildPhotoPathname,
   validateImage,
 } from "@/lib/upload-rules";
-import { deletePhotoAction, refreshPhotosAction } from "./actions";
+import {
+  deletePhotoAction,
+  refreshPhotosAction,
+  testStorageAction,
+  type ActionState,
+} from "./actions";
 
 type Folder = (typeof GALLERY_FOLDERS)[number];
 
@@ -41,6 +46,8 @@ export default function AdminPanel({
           l&apos;interface, mais les envois et suppressions échoueront.
         </p>
       )}
+
+      <StorageTest />
 
       {/* Onglets */}
       <div className="flex flex-wrap gap-2">
@@ -76,11 +83,61 @@ export default function AdminPanel({
 }
 
 /* -------------------------------------------------------------------------- */
+/*  Diagnostic du stockage                                                     */
+/* -------------------------------------------------------------------------- */
+
+function StorageTest() {
+  const [state, setState] = useState<ActionState | null>(null);
+  const [running, startTest] = useTransition();
+
+  return (
+    <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.02] px-5 py-4">
+      <button
+        type="button"
+        disabled={running}
+        onClick={() =>
+          startTest(async () => setState(await testStorageAction()))
+        }
+        className="rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold text-white/80 transition-colors hover:border-brand/50 hover:text-white disabled:opacity-60"
+      >
+        {running ? "Test en cours…" : "Tester le stockage"}
+      </button>
+      {state?.success && (
+        <span className="text-sm text-emerald-300">{state.success}</span>
+      )}
+      {state?.error && (
+        <span className="text-sm text-red-300">{state.error}</span>
+      )}
+      {!state && (
+        <span className="text-sm text-white/40">
+          Vérifie que le serveur sait écrire dans le stockage.
+        </span>
+      )}
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
 /*  Contenu d'un onglet                                                        */
 /* -------------------------------------------------------------------------- */
 
 /** Photo choisie mais pas encore envoyée. */
 type Pending = { id: string; file: File; previewUrl: string };
+
+/** Au-delà, on considère l'envoi perdu plutôt que de laisser tourner. */
+const UPLOAD_TIMEOUT_MS = 90_000;
+
+/** Transforme l'erreur du SDK en message compréhensible. */
+function describeUploadError(error: unknown) {
+  if (!(error instanceof Error)) return "envoi impossible";
+  if (error.name === "TimeoutError" || error.name === "AbortError") {
+    return "délai dépassé — connexion trop lente, ou le stockage a refusé le fichier.";
+  }
+  if (error.message.includes("client token")) {
+    return "le serveur n'a pas délivré d'autorisation d'envoi (session expirée ou stockage non relié).";
+  }
+  return error.message;
+}
 
 function FolderEditor({ data }: { data: FolderData }) {
   const { folder, photos, fallbackCount } = data;
@@ -158,7 +215,8 @@ function FolderEditor({ data }: { data: FolderData }) {
     const failures: string[] = [];
 
     for (const [index, item] of pending.entries()) {
-      setBusy(`Envoi ${index + 1}/${pending.length} — ${item.file.name}`);
+      const position = `Envoi ${index + 1}/${pending.length} — ${item.file.name}`;
+      setBusy(position);
       try {
         await upload(
           buildPhotoPathname(folder.key, item.file.name, title),
@@ -167,13 +225,17 @@ function FolderEditor({ data }: { data: FolderData }) {
             access: "public",
             handleUploadUrl: "/api/admin/upload",
             contentType: item.file.type,
+            // Sans limite de temps, le SDK réessaie une dizaine de fois avec
+            // des délais croissants : l'interface semble figée alors que
+            // l'envoi échoue en silence.
+            abortSignal: AbortSignal.timeout(UPLOAD_TIMEOUT_MS),
+            onUploadProgress: ({ percentage }) =>
+              setBusy(`${position} — ${Math.round(percentage)} %`),
           },
         );
       } catch (error) {
         failures.push(
-          `« ${item.file.name} » : ${
-            error instanceof Error ? error.message : "envoi impossible"
-          }`,
+          `« ${item.file.name} » : ${describeUploadError(error)}`,
         );
       }
     }
