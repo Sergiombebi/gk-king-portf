@@ -6,12 +6,20 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { navLinks, site, whatsappLink } from "@/lib/site";
 import AdminLink from "./AdminLink";
+import LoginModal from "./LoginModal";
 import { CloseIcon, MenuIcon, WhatsAppIcon } from "./icons";
 
 export default function Header() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
+
+  /** Tous les boutons « Administration » ouvrent la même fenêtre de connexion. */
+  function openLogin() {
+    setOpen(false); // referme le menu mobile s'il était déroulé
+    setLoginOpen(true);
+  }
 
   // Ombre / fond au défilement
   useEffect(() => {
@@ -26,13 +34,16 @@ export default function Header() {
     setOpen(false);
   }, [pathname]);
 
-  // Bloquer le scroll du body quand le menu mobile est ouvert
+  // Bloquer le scroll du body quand le menu mobile ou la connexion est ouvert.
+  // `loginOpen` compte ici aussi : sans ça, fermer le menu pour ouvrir la
+  // fenêtre de connexion débloquerait le scroll juste après que celle-ci l'a
+  // bloqué.
   useEffect(() => {
-    document.body.style.overflow = open ? "hidden" : "";
+    document.body.style.overflow = open || loginOpen ? "hidden" : "";
     return () => {
       document.body.style.overflow = "";
     };
-  }, [open]);
+  }, [open, loginOpen]);
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -85,10 +96,14 @@ export default function Header() {
         {/* CTA + burger */}
         <div className="flex items-center gap-2">
           {/* Bureau : bouton complet */}
-          <AdminLink className="hidden items-center gap-2 rounded-full border border-brand/40 px-4 py-2 text-sm font-semibold text-brand-light transition-colors hover:border-brand hover:bg-brand hover:text-white lg:inline-flex" />
+          <AdminLink
+            onClick={openLogin}
+            className="hidden items-center gap-2 rounded-full border border-brand/40 px-4 py-2 text-sm font-semibold text-brand-light transition-colors hover:border-brand hover:bg-brand hover:text-white lg:inline-flex"
+          />
 
           {/* Mobile : icône seule, toujours accessible sans ouvrir le menu */}
           <AdminLink
+            onClick={openLogin}
             showLabel={false}
             className="flex h-10 w-10 items-center justify-center rounded-full border border-brand/40 text-brand-light transition-colors hover:bg-brand hover:text-white lg:hidden"
           />
@@ -152,9 +167,14 @@ export default function Header() {
             <WhatsAppIcon className="h-4 w-4" />
             Écrire sur WhatsApp
           </a>
-          <AdminLink className="mt-1 inline-flex items-center justify-center gap-2 rounded-full border border-brand/40 px-5 py-3 text-sm font-semibold text-brand-light" />
+          <AdminLink
+            onClick={openLogin}
+            className="mt-1 inline-flex items-center justify-center gap-2 rounded-full border border-brand/40 px-5 py-3 text-sm font-semibold text-brand-light"
+          />
         </nav>
       </div>
+
+      <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
     </header>
   );
 }

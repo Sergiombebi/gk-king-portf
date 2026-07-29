@@ -1,28 +1,32 @@
-import Link from "next/link";
+"use client";
 
 /**
- * Raccourci vers l'espace administration. Visible par tous : l'accès réel est
- * protégé par la page de connexion (identifiant + mot de passe), qu'un
- * visiteur ne peut pas franchir.
+ * Bouton d'accès à l'espace administration. Il n'emmène pas sur une autre page :
+ * il ouvre la fenêtre de connexion (voir `LoginModal`), gérée par l'en-tête.
+ * L'accès réel reste protégé côté serveur (identifiant + mot de passe).
  */
 export default function AdminLink({
   className = "",
   showLabel = true,
+  onClick,
 }: {
   className?: string;
   /** Sur mobile, seule l'icône est affichée faute de place. */
   showLabel?: boolean;
+  onClick: () => void;
 }) {
   return (
-    <Link
-      href="/admin/connexion"
+    <button
+      type="button"
+      onClick={onClick}
       className={className}
       title="Espace administration"
       aria-label="Espace administration"
+      aria-haspopup="dialog"
     >
       <LockIcon className="h-4 w-4" />
       {showLabel && "Administration"}
-    </Link>
+    </button>
   );
 }
 

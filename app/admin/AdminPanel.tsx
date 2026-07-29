@@ -4,6 +4,7 @@ import { upload } from "@vercel/blob/client";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
+import { SpinnerIcon } from "@/app/components/icons";
 import { describeBlobError } from "@/lib/blob-errors";
 import type { GALLERY_FOLDERS, GalleryFolderKey } from "@/lib/gallery-config";
 import type { ManagedPhoto } from "@/lib/photos";
@@ -93,6 +94,27 @@ export default function AdminPanel({
 /** Photo choisie mais pas encore envoyée. */
 type Pending = { id: string; file: File; previewUrl: string };
 
+/** État de la publication en cours, affiché par le voile d'attente. */
+type Progress = {
+  /** `upload` : une photo part vers le stockage. `refresh` : mise à jour du site. */
+  step: "upload" | "refresh";
+  /** Nom du fichier en cours, ou libellé de l'étape finale. */
+  label: string;
+  /** Rang de la photo en cours, à partir de 1. */
+  index: number;
+  total: number;
+  /** Avancement de la photo en cours, `null` quand il n'est pas mesurable. */
+  percent: number | null;
+};
+
+/** Avancement global, en pourcentage, toutes photos confondues. */
+function overallPercent({ index, total, percent }: Progress) {
+  // Sans mesure (envoi par le serveur), on place le curseur au milieu de la
+  // photo en cours plutôt que de laisser la barre figée.
+  const withinCurrent = (percent ?? 50) / 100;
+  return Math.round(((index - 1 + withinCurrent) / total) * 100);
+}
+
 /** Au-delà, on considère l'envoi perdu plutôt que de laisser tourner. */
 const UPLOAD_TIMEOUT_MS = 90_000;
 
@@ -134,9 +156,10 @@ function FolderEditor({
   const inputRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState("");
   const [pending, setPending] = useState<Pending[]>([]);
-  const [busy, setBusy] = useState<string | null>(null);
+  const [progress, setProgress] = useState<Progress | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
   const [dragging, setDragging] = useState(false);
+  const busy = progress !== null;
 
   // Libère les aperçus gardés en mémoire quand on quitte l'onglet.
   const pendingRef = useRef<Pending[]>([]);
@@ -201,11 +224,18 @@ function FolderEditor({
   /** Envoi effectif, déclenché par le bouton. */
   async function sendPending() {
     if (pending.length === 0 || busy) return;
+    const total = pending.length;
     const failures: string[] = [];
 
     for (const [index, item] of pending.entries()) {
-      const position = `Envoi ${index + 1}/${pending.length} — ${item.file.name}`;
-      setBusy(position);
+      setProgress({
+        step: "upload",
+        label: item.file.name,
+        index: index + 1,
+        total,
+        // L'envoi par le serveur ne remonte pas d'avancement.
+        percent: browserUpload ? 0 : null,
+      });
       try {
         if (browserUpload) {
           await upload(
@@ -220,7 +250,11 @@ function FolderEditor({
               // l'envoi échoue en silence.
               abortSignal: AbortSignal.timeout(UPLOAD_TIMEOUT_MS),
               onUploadProgress: ({ percentage }) =>
-                setBusy(`${position} — ${Math.round(percentage)} %`),
+                setProgress((current) =>
+                  current
+                    ? { ...current, percent: Math.round(percentage) }
+                    : current,
+                ),
             },
           );
         } else {
@@ -231,18 +265,26 @@ function FolderEditor({
       }
     }
 
-    setBusy("Actualisation du site…");
+    setProgress({
+      step: "refresh",
+      label: "Mise à jour du site…",
+      index: total,
+      total,
+      percent: 100,
+    });
     await refreshPhotosAction();
     router.refresh();
 
     setErrors(failures);
     clearPending();
     setTitle("");
-    setBusy(null);
+    setProgress(null);
   }
 
   return (
     <section className="space-y-6">
+      {progress && <PublishOverlay progress={progress} />}
+
       <p className="text-sm leading-relaxed text-white/50">{folder.hint}</p>
 
       {/* Zone d'envoi */}
@@ -285,15 +327,11 @@ function FolderEditor({
             type="file"
             accept={ALLOWED_IMAGE_TYPES.join(",")}
             multiple={!folder.single}
-            disabled={Boolean(busy)}
+            disabled={busy}
             onChange={(e) => e.target.files && addFiles(e.target.files)}
-            className="block w-full text-sm text-white/60 file:mr-4 file:rounded-full file:border-0 file:bg-brand file:px-5 file:py-2.5 file:text-sm file:font-semibold file:text-white hover:file:bg-brand-dark"
+            className="block w-full text-sm text-white/60 file:mr-4 file:rounded-full file:border-0 file:bg-brand file:px-5 file:py-2.5 file:text-sm file:font-semibold file:text-white hover:file:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50"
           />
         </div>
-
-        {busy && (
-          <p className="mt-5 text-sm font-medium text-brand-light">{busy}</p>
-        )}
       </div>
 
       {/* Aperçu avant envoi */}
@@ -313,7 +351,7 @@ function FolderEditor({
               <button
                 type="button"
                 onClick={clearPending}
-                disabled={Boolean(busy)}
+                disabled={busy}
                 className="rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold text-white/70 transition-colors hover:border-white/40 hover:text-white disabled:opacity-50"
               >
                 Tout annuler
@@ -321,11 +359,12 @@ function FolderEditor({
               <button
                 type="button"
                 onClick={() => void sendPending()}
-                disabled={Boolean(busy)}
-                className="rounded-full bg-brand px-7 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={busy}
+                className="inline-flex items-center gap-2 rounded-full bg-brand px-7 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60"
               >
+                {busy && <SpinnerIcon className="h-4 w-4 animate-spin" />}
                 {busy
-                  ? "Envoi en cours…"
+                  ? "Publication en cours…"
                   : `Envoyer ${pending.length > 1 ? `les ${pending.length} photos` : "la photo"}`}
               </button>
             </div>
@@ -347,7 +386,7 @@ function FolderEditor({
                   <button
                     type="button"
                     onClick={() => removePending(item.id)}
-                    disabled={Boolean(busy)}
+                    disabled={busy}
                     aria-label={`Retirer ${item.file.name}`}
                     className="absolute right-2 top-2 rounded-full bg-black/70 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-600 disabled:opacity-50"
                   >
@@ -416,6 +455,56 @@ function FolderEditor({
 }
 
 /* -------------------------------------------------------------------------- */
+/*  Voile d'attente pendant la publication                                     */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Recouvre la page tant que les photos partent : l'envoi peut durer plusieurs
+ * dizaines de secondes, et rien ne doit être modifié entre-temps.
+ */
+function PublishOverlay({ progress }: { progress: Progress }) {
+  const done = overallPercent(progress);
+
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="animate-fade-in fixed inset-0 z-[100] flex items-center justify-center bg-ink/90 px-5 backdrop-blur-sm"
+    >
+      <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-white/[0.04] p-8 text-center">
+        <SpinnerIcon className="mx-auto h-10 w-10 animate-spin text-brand" />
+
+        <h3 className="font-display mt-5 text-lg font-semibold text-white">
+          Publication en cours…
+        </h3>
+
+        <p className="mt-2 truncate text-sm text-white/60" title={progress.label}>
+          {progress.label}
+        </p>
+
+        {progress.step === "upload" && progress.total > 1 && (
+          <p className="mt-1 text-xs text-white/40">
+            Photo {progress.index} sur {progress.total}
+          </p>
+        )}
+
+        <div className="mt-6 h-2 w-full overflow-hidden rounded-full bg-white/10">
+          <div
+            className="h-full rounded-full bg-brand transition-[width] duration-300 ease-out"
+            style={{ width: `${done}%` }}
+          />
+        </div>
+        <p className="mt-2 text-xs font-semibold text-brand-light">{done} %</p>
+
+        <p className="mt-5 text-xs leading-relaxed text-white/40">
+          Ne fermez pas cette page tant que l&apos;envoi n&apos;est pas terminé.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
 /*  Vignette + suppression                                                     */
 /* -------------------------------------------------------------------------- */
 
@@ -465,7 +554,11 @@ function PhotoCard({ photo }: { photo: ManagedPhoto }) {
           disabled={pending}
           className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-red-500/40 px-4 py-2 text-xs font-semibold text-red-300 transition-colors hover:border-red-500 hover:bg-red-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <TrashIcon className="h-3.5 w-3.5" />
+          {pending ? (
+            <SpinnerIcon className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <TrashIcon className="h-3.5 w-3.5" />
+          )}
           {pending ? "Suppression…" : "Supprimer"}
         </button>
         {error && (

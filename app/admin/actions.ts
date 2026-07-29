@@ -12,7 +12,12 @@ import { changePassword, verifyCredentials } from "@/lib/admin-users";
 import { describeBlobError } from "@/lib/blob-errors";
 import { isGalleryFolder } from "@/lib/gallery-config";
 import { deletePhoto } from "@/lib/photos";
-import { createSession, destroySession, requireSession } from "@/lib/session";
+import {
+  createSession,
+  destroySession,
+  isAuthConfigured,
+  requireSession,
+} from "@/lib/session";
 
 export type ActionState = { error?: string; success?: string };
 
@@ -37,6 +42,15 @@ export async function loginAction(
     return { error: "Renseignez votre identifiant et votre mot de passe." };
   }
 
+  // Contrôle explicite : la fenêtre de connexion s'ouvre depuis le site public,
+  // sans le message de configuration affiché par la page `/admin/connexion`.
+  if (!isAuthConfigured()) {
+    return {
+      error:
+        "Connexion impossible : la configuration du serveur est incomplète.",
+    };
+  }
+
   let valid = false;
   try {
     valid = await verifyCredentials(username, password);
@@ -58,7 +72,10 @@ export async function loginAction(
 
 export async function logoutAction() {
   await destroySession();
-  redirect("/admin/connexion");
+  // Purge le tableau de bord du cache routeur : sans ça, le bouton « précédent »
+  // pourrait réafficher la version rendue pendant la session.
+  revalidatePath("/admin", "layout");
+  redirect("/");
 }
 
 /* -------------------------------------------------------------------------- */

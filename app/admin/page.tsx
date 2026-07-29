@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { GALLERY_FOLDERS, fallbackGallery } from "@/lib/gallery-config";
 import {
@@ -9,8 +8,8 @@ import {
 } from "@/lib/photos";
 import { getSession } from "@/lib/session";
 import AdminPanel, { type FolderData } from "./AdminPanel";
+import LogoutButton from "./LogoutButton";
 import PasswordForm from "./PasswordForm";
-import { logoutAction } from "./actions";
 
 export const metadata: Metadata = {
   title: "Espace administration",
@@ -49,22 +48,9 @@ export default async function AdminPage() {
               <strong className="text-white/80">{session.username}</strong>
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <Link
-              href="/"
-              className="rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold text-white/70 transition-colors hover:border-brand/50 hover:text-white"
-            >
-              Voir le site
-            </Link>
-            <form action={logoutAction}>
-              <button
-                type="submit"
-                className="rounded-full bg-white/10 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/20"
-              >
-                Se déconnecter
-              </button>
-            </form>
-          </div>
+          {/* La déconnexion est la seule sortie : revenir au tableau de bord
+              imposera une nouvelle connexion. */}
+          <LogoutButton />
         </header>
 
         <AdminPanel

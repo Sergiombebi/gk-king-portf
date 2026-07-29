@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { SpinnerIcon } from "@/app/components/icons";
 import { loginAction, type ActionState } from "../actions";
 
 const initialState: ActionState = {};
@@ -58,8 +59,9 @@ export default function LoginForm({ next }: { next: string }) {
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-full bg-brand px-7 py-3.5 text-sm font-semibold text-white transition-all hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-brand px-7 py-3.5 text-sm font-semibold text-white transition-all hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60"
       >
+        {pending && <SpinnerIcon className="h-4 w-4 animate-spin" />}
         {pending ? "Connexion…" : "Se connecter"}
       </button>
     </form>
