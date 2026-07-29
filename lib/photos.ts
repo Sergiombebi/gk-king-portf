@@ -7,11 +7,7 @@
 
 import { del, list, put } from "@vercel/blob";
 import type { GalleryItem } from "@/app/components/Gallery";
-import {
-  FALLBACK_HERO,
-  fallbackGallery,
-  type GalleryFolderKey,
-} from "./gallery-config";
+import { fallbackGallery, type GalleryFolderKey } from "./gallery-config";
 import { altFromPathname } from "./upload-rules";
 
 const ROOT = "galerie";
@@ -81,12 +77,6 @@ export async function getGallery(
     alt: photo.alt,
     featured: i === 0,
   }));
-}
-
-/** Photo de fond des en-têtes : la plus récente envoyée, sinon celle du site. */
-export async function getHeroImage(): Promise<string> {
-  const managed = await listManagedPhotos("hero");
-  return managed.at(-1)?.url ?? FALLBACK_HERO;
 }
 
 /**

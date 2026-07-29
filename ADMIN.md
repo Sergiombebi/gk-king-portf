@@ -71,12 +71,15 @@ bord une fois les identifiants saisis. La session dure 7 jours.
 
 ## Comment ça marche
 
-- **Cinq sections** sont gérables : la photo d'en-tête, le portfolio de
-  l'accueil, et les galeries des trois prestations.
+- **Quatre sections** sont gérables : le portfolio de l'accueil et les galeries
+  des trois prestations. La photo d'en-tête, elle, n'est pas gérable ici : c'est
+  le fichier `public/galerie/hero.jpg`, à remplacer dans le code.
 - **Repli automatique** : tant qu'aucune photo n'a été envoyée pour une
   section, le site continue d'afficher les images livrées dans
   `public/galerie/`. Dès la première photo envoyée, celles-ci prennent le
   relais.
+- **Aperçu replié** : chaque onglet n'affiche que les 8 premières photos en
+  ligne. Un bouton « Voir plus » déplie la totalité de la section.
 - **Envoi direct** : le navigateur envoie la photo directement au stockage,
   sans passer par le serveur. Les gros fichiers passent donc sans problème
   (limite fixée à 8 Mo par photo, formats JPG, PNG, WEBP et AVIF).

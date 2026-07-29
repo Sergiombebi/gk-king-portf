@@ -1,5 +1,5 @@
-import type { GalleryFolderKey } from "@/lib/gallery-config";
-import { getGallery, getHeroImage } from "@/lib/photos";
+import { HERO_IMAGE, type GalleryFolderKey } from "@/lib/gallery-config";
+import { getGallery } from "@/lib/photos";
 import type { Service } from "@/lib/services";
 import { site, whatsappLink } from "@/lib/site";
 import MasonryGallery from "./MasonryGallery";
@@ -10,16 +10,13 @@ import { Button, Container, Eyebrow, SectionHeading } from "./ui";
 
 /** Gabarit commun aux trois pages de prestation. */
 export default async function ServicePage({ service }: { service: Service }) {
-  const [heroImage, gallery] = await Promise.all([
-    getHeroImage(),
-    getGallery(service.slug as GalleryFolderKey),
-  ]);
+  const gallery = await getGallery(service.slug as GalleryFolderKey);
 
   return (
     <>
       {/* En-tête photo commun */}
       <PageHeader
-        image={heroImage}
+        image={HERO_IMAGE}
         eyebrow="Prestation"
         title={service.title}
         intro={service.intro}

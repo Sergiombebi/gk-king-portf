@@ -4,7 +4,7 @@ import PageHeader from "@/app/components/PageHeader";
 import Reveal from "@/app/components/Reveal";
 import { WhatsAppIcon } from "@/app/components/icons";
 import { Button, Container, SectionHeading } from "@/app/components/ui";
-import { getHeroImage } from "@/lib/photos";
+import { HERO_IMAGE } from "@/lib/gallery-config";
 import { site, whatsappLink } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -32,14 +32,12 @@ const values = [
   },
 ];
 
-export default async function Page() {
-  const heroImage = await getHeroImage();
-
+export default function Page() {
   return (
     <>
       {/* En-tête photo commun */}
       <PageHeader
-        image={heroImage}
+        image={HERO_IMAGE}
         eyebrow="À propos de moi"
         title={
           <>

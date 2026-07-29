@@ -118,6 +118,13 @@ function overallPercent({ index, total, percent }: Progress) {
 /** Au-delà, on considère l'envoi perdu plutôt que de laisser tourner. */
 const UPLOAD_TIMEOUT_MS = 90_000;
 
+/**
+ * Nombre de vignettes montrées d'emblée dans un onglet. Au-delà, la grille est
+ * repliée derrière un bouton « Voir plus » : une section peut contenir des
+ * dizaines de photos, et les faire toutes charger rend la page interminable.
+ */
+const PHOTOS_PREVIEW_COUNT = 8;
+
 /** Voie de secours : la photo passe par le site, qui l'écrit dans le stockage. */
 async function uploadThroughServer(
   folder: GalleryFolderKey,
@@ -159,7 +166,11 @@ function FolderEditor({
   const [progress, setProgress] = useState<Progress | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
   const [dragging, setDragging] = useState(false);
+  const [showAllPhotos, setShowAllPhotos] = useState(false);
   const busy = progress !== null;
+  const visiblePhotos = showAllPhotos
+    ? photos
+    : photos.slice(0, PHOTOS_PREVIEW_COUNT);
 
   // Libère les aperçus gardés en mémoire quand on quitte l'onglet.
   const pendingRef = useRef<Pending[]>([]);
@@ -195,14 +206,7 @@ function FolderEditor({
     }
 
     setErrors(problems);
-    setPending((current) => {
-      // Une seule photo attendue pour l'en-tête : la nouvelle remplace l'ancienne.
-      if (folder.single) {
-        current.forEach((item) => URL.revokeObjectURL(item.previewUrl));
-        return accepted.slice(-1);
-      }
-      return [...current, ...accepted];
-    });
+    setPending((current) => [...current, ...accepted]);
     if (inputRef.current) inputRef.current.value = "";
   }
 
@@ -326,7 +330,7 @@ function FolderEditor({
             ref={inputRef}
             type="file"
             accept={ALLOWED_IMAGE_TYPES.join(",")}
-            multiple={!folder.single}
+            multiple
             disabled={busy}
             onChange={(e) => e.target.files && addFiles(e.target.files)}
             className="block w-full text-sm text-white/60 file:mr-4 file:rounded-full file:border-0 file:bg-brand file:px-5 file:py-2.5 file:text-sm file:font-semibold file:text-white hover:file:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50"
@@ -444,10 +448,24 @@ function FolderEditor({
             immédiatement.
           </p>
           <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            {photos.map((photo) => (
+            {visiblePhotos.map((photo) => (
               <PhotoCard key={photo.pathname} photo={photo} />
             ))}
           </div>
+
+          {photos.length > PHOTOS_PREVIEW_COUNT && (
+            <div className="mt-6 flex justify-center">
+              <button
+                type="button"
+                onClick={() => setShowAllPhotos((v) => !v)}
+                className="rounded-full border border-white/15 px-6 py-2.5 text-sm font-semibold text-white/70 transition-colors hover:border-brand/50 hover:text-white"
+              >
+                {showAllPhotos
+                  ? "Voir moins"
+                  : `Voir plus (${photos.length - PHOTOS_PREVIEW_COUNT} de plus)`}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </section>

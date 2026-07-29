@@ -6,7 +6,8 @@ import Reveal from "./components/Reveal";
 import ServiceIcon from "./components/ServiceIcon";
 import { ArrowIcon, MapPinIcon, WhatsAppIcon } from "./components/icons";
 import { Button, Container, Eyebrow, SectionHeading } from "./components/ui";
-import { getGallery, getHeroImage } from "@/lib/photos";
+import { HERO_IMAGE } from "@/lib/gallery-config";
+import { getGallery } from "@/lib/photos";
 import { services } from "@/lib/services";
 import { site, whatsappLink } from "@/lib/site";
 
@@ -28,12 +29,10 @@ export default function Home() {
 /* -------------------------------------------------------------------------- */
 /*  HERO                                                                        */
 /* -------------------------------------------------------------------------- */
-async function Hero() {
-  const heroImage = await getHeroImage();
-
+function Hero() {
   return (
     <PageHeader
-      image={heroImage}
+      image={HERO_IMAGE}
       eyebrow={site.name}
       title="Photographe professionnel"
       intro="Basé à Yaoundé, disponible partout."

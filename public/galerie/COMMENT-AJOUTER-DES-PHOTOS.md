@@ -15,7 +15,6 @@ Sections gérables depuis l'admin :
 
 | Section | Où elle apparaît sur le site |
 |---|---|
-| Photo d'en-tête | Grande photo de fond, en haut de **toutes** les pages |
 | Portfolio (accueil) | Section « Un aperçu de mon univers » |
 | Photographie | Galerie de la page Photographie |
 | Impression numérique | Galerie de la page Impression numérique |
@@ -29,7 +28,8 @@ ajoutée via l'admin, elles sont remplacées.
 
 ```
 public/galerie/
-├── hero.jpg                 ← Photo de fond de l'en-tête (COMMUNE à TOUTES les pages)
+├── hero.jpg                 ← Photo de fond de l'en-tête (COMMUNE à TOUTES les pages,
+│                              non gérable depuis l'admin : remplacez ce fichier)
 ├── accueil/                 ← Portfolio de la page d'accueil
 ├── photographie/            ← Galerie « Photographie »
 ├── impression-numerique/    ← Galerie « Impression numérique »
